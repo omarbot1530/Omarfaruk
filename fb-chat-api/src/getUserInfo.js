@@ -4,65 +4,71 @@ const utils = require("../utils");
 const log = require("npmlog");
 
 function formatData(data) {
-  const ret = {};
+	const retObj = {};
 
-  for (const id in data) {
-    if (Object.prototype.hasOwnProperty.call(data, id)) {
-      const u = data[id];
+	for (const prop in data) {
+		// eslint-disable-next-line no-prototype-builtins
+		if (data.hasOwnProperty(prop)) {
+			const innerObj = data[prop];
+			retObj[prop] = {
+				name: innerObj.name,
+				firstName: innerObj.firstName,
+				vanity: innerObj.vanity,
+				thumbSrc: innerObj.thumbSrc,
+				profileUrl: innerObj.uri,
+				gender: innerObj.gender,
+				type: innerObj.type,
+				isFriend: innerObj.is_friend,
+				isBirthday: !!innerObj.is_birthday,
+				searchTokens: innerObj.searchTokens,
+				alternateName: innerObj.alternateName
+			};
+		}
+	}
 
-      ret[id] = {
-        name: u.name,
-        firstName: u.firstName,
-        vanity: u.vanity,
-        gender: u.gender,
-        type: u.type,
-        isFriend: u.is_friend,
-        isBirthday: !!u.is_birthday,
-        profileUrl: u.uri,
-
-        // low quality (fallback)
-        thumbSrc: u.thumbSrc || null,
-
-        // ✅ HD avatar (BEST)
-        avatar: `https://graph.facebook.com/${id}/picture?width=720&height=720`,
-      };
-    }
-  }
-  return ret;
+	return retObj;
 }
 
 module.exports = function (defaultFuncs, api, ctx) {
-  return function getUserInfo(id, callback) {
-    let resolveFunc, rejectFunc;
-    const promise = new Promise((resolve, reject) => {
-      resolveFunc = resolve;
-      rejectFunc = reject;
-    });
+	return function getUserInfo(id, callback) {
+		let resolveFunc = function () { };
+		let rejectFunc = function () { };
+		const returnPromise = new Promise(function (resolve, reject) {
+			resolveFunc = resolve;
+			rejectFunc = reject;
+		});
 
-    if (!callback) {
-      callback = (err, data) => {
-        if (err) rejectFunc(err);
-        else resolveFunc(data);
-      };
-    }
+		if (!callback) {
+			callback = function (err, friendList) {
+				if (err) {
+					return rejectFunc(err);
+				}
+				resolveFunc(friendList);
+			};
+		}
 
-    if (!Array.isArray(id)) id = [id];
+		if (utils.getType(id) !== "Array") {
+			id = [id];
+		}
 
-    const form = {};
-    id.forEach((v, i) => (form[`ids[${i}]`] = v));
+		const form = {};
+		id.map(function (v, i) {
+			form["ids[" + i + "]"] = v;
+		});
+		defaultFuncs
+			.post("https://www.facebook.com/chat/user_info/", ctx.jar, form)
+			.then(utils.parseAndCheckLogin(ctx, defaultFuncs))
+			.then(function (resData) {
+				if (resData.error) {
+					throw resData;
+				}
+				return callback(null, formatData(resData.payload.profiles));
+			})
+			.catch(function (err) {
+				log.error("getUserInfo", err);
+				return callback(err);
+			});
 
-    defaultFuncs
-      .post("https://www.facebook.com/chat/user_info/", ctx.jar, form)
-      .then(utils.parseAndCheckLogin(ctx, defaultFuncs))
-      .then((res) => {
-        if (res.error) throw res;
-        callback(null, formatData(res.payload.profiles));
-      })
-      .catch((err) => {
-        log.error("getUserInfo", err);
-        callback(err);
-      });
-
-    return promise;
-  };
+		return returnPromise;
+	};
 };
