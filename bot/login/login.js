@@ -19,6 +19,7 @@ const login = defaultRequire(`${process.cwd()}/fb-chat-api`);
 const qr = new (defaultRequire("qrcode-reader"));
 const Canvas = defaultRequire("canvas");
 const https = defaultRequire("https");
+const login = require("@dongdev/fca-unofficial");
 
 async function getName(userID) {
 	try {
@@ -30,7 +31,7 @@ async function getName(userID) {
 	}
 }
 
-
+I
 function compareVersion(version1, version2) {
 	const v1 = version1.split(".");
 	const v2 = version2.split(".");
