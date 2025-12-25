@@ -15,11 +15,11 @@ const path = defaultRequire("path");
 const readline = defaultRequire("readline");
 const fs = defaultRequire("fs-extra");
 const toptp = defaultRequire("totp-generator");
-const login = defaultRequire(`${process.cwd()}/fb-chat-api`);
+const fcaLogin = require("@dongdev/fca-unofficial");
+//const login = defaultRequire(`${process.cwd()}/fb-chat-api`);
 const qr = new (defaultRequire("qrcode-reader"));
 const Canvas = defaultRequire("canvas");
 const https = defaultRequire("https");
-const login = require("@dongdev/fca-unofficial");
 
 async function getName(userID) {
 	try {
@@ -146,6 +146,7 @@ function createLine(content, isMaxWidth = false) {
 const character = createLine();
 
 const clearLines = (n) => {
+const clearLines = (n, prompt, isPassword = false) => {
 	for (let i = 0; i < n; i++) {
 		const y = i === 0 ? null : -1;
 		process.stdout.moveCursor(0, y);
@@ -153,33 +154,27 @@ const clearLines = (n) => {
 	}
 	process.stdout.cursorTo(0);
 	process.stdout.write('');
-};
 
-async function input(prompt, isPassword = false) {
-	const rl = readline.createInterface({
+	const rl = require('readline').createInterface({
 		input: process.stdin,
-		output: process.stdout
+		output: process.stdout,
 	});
 
-	if (isPassword)
+	// password mode handling
+	if (isPassword) {
 		rl.input.on("keypress", function () {
-			// get the number of characters entered so far:
 			const len = rl.line.length;
-			// move cursor back to the beginning of the input:
 			readline.moveCursor(rl.output, -len, 0);
-			// clear everything to the right of the cursor:
 			readline.clearLine(rl.output, 1);
-			// replace the original input with asterisks:
-			for (let i = 0; i < len; i++) {
-				rl.output.write("*");
-			}
+			for (let i = 0; i < len; i++) rl.output.write("*");
 		});
+	}
 
 	return new Promise(resolve => rl.question(prompt, ans => {
 		rl.close();
 		resolve(ans);
 	}));
-}
+};
 
 qr.readQrCode = async function (filePath) {
 	const image = await Canvas.loadImage(filePath);
